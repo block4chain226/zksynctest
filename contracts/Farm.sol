@@ -15,8 +15,8 @@ contract Farm is Ownable, ReentrancyGuard {
         uint256 startDate;
     }
 
-    IERC20 public tokenA;
-    IERC20 public tokenB;
+    IERC20 public rewardToken;
+    IERC20 public depositToken;
 
     uint256 public accRewardPerSecond = 10;
     uint256 public constant PRECISION_FACTOR = 1e18;
@@ -25,9 +25,9 @@ contract Farm is Ownable, ReentrancyGuard {
 
     mapping(address => Position) public positions;
 
-    constructor(address _tokenA, address _tokenB){
-        tokenA = IERC20(_tokenA);
-        tokenB = IERC20(_tokenB);
+    constructor(address _rewardToken, address _depositToken){
+        rewardToken = IERC20(_rewardToken);
+        depositToken = IERC20(_depositToken);
     }
 
     event Stake(address indexed user, uint256 amount, uint256 indexed startDate);
@@ -38,9 +38,9 @@ contract Farm is Ownable, ReentrancyGuard {
     event DepositRewardToken(uint256 amount, uint256 indexed date);
 
     function stake(uint256 _amount) external nonReentrant {
-        require(tokenB.balanceOf(msg.sender) >= _amount, "you don't have enough tokens");
+        require(depositToken.balanceOf(msg.sender) >= _amount, "you don't have enough tokens");
         Position storage newPosition = positions[msg.sender];
-        tokenB.safeTransferFrom(msg.sender, address(this), _amount);
+        depositToken.safeTransferFrom(msg.sender, address(this), _amount);
         if (newPosition.amount > 0) {
             claim();
         }
@@ -52,13 +52,13 @@ contract Farm is Ownable, ReentrancyGuard {
 
     function unStake(uint256 _amount) external nonReentrant {
         require(_amount > 0, "amount 0");
-        require(tokenB.balanceOf(address(this)) >= _amount, "contract hasn't enough tokens");
+        require(depositToken.balanceOf(address(this)) >= _amount, "contract hasn't enough tokens");
         Position storage userPosition = positions[msg.sender];
         require(userPosition.amount >= _amount, "you have not enough position amount");
         claim();
         userPosition.amount -= _amount;
         totalStaked -= _amount;
-        tokenB.safeTransfer(msg.sender, _amount);
+        depositToken.safeTransfer(msg.sender, _amount);
         emit UnStake(msg.sender, _amount, block.timestamp);
     }
 
@@ -69,10 +69,10 @@ contract Farm is Ownable, ReentrancyGuard {
         uint256 stakeTime = block.timestamp - userPosition.startDate;
         uint256 claimAmount = (userPosition.amount * stakeTime * accRewardPerSecond) / PRECISION_FACTOR;
         require(claimAmount > 0, "user have not rewards");
-        require(tokenA.balanceOf(address(this)) >= claimAmount, "contract has not enough reward tokens");
+        require(rewardToken.balanceOf(address(this)) >= claimAmount, "contract has not enough reward tokens");
         totalRewardsPaid += claimAmount;
         userPosition.startDate = block.timestamp;
-        tokenA.safeTransfer(msg.sender, claimAmount);
+        rewardToken.safeTransfer(msg.sender, claimAmount);
         emit Claim(msg.sender, claimAmount, block.timestamp);
     }
 
@@ -92,9 +92,9 @@ contract Farm is Ownable, ReentrancyGuard {
 
     function depositRewardToken(uint256 _amount) external onlyOwner {
         require(_amount > 0, "amount 0");
-        require(tokenA.balanceOf(owner()) >= _amount, "you have not enough reward tokens");
-        require(tokenA.allowance(msg.sender, address(this)) >= _amount, "you haven't enough allowance");
-        tokenA.safeTransferFrom(owner(), address(this), _amount);
+        require(rewardToken.balanceOf(owner()) >= _amount, "you have not enough reward tokens");
+        require(rewardToken.allowance(msg.sender, address(this)) >= _amount, "you haven't enough allowance");
+        rewardToken.safeTransferFrom(owner(), address(this), _amount);
         emit DepositRewardToken(_amount, block.timestamp);
     }
 
