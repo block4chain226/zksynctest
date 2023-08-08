@@ -71,7 +71,6 @@ describe("Test", function () {
             it("depositRewardToken should be reverted with: you have not enough reward tokens", async () => {
                 const {farmContract, rewardTokenContract, owner, tenThousand_tokens} = await loadFixture(deploy);
                 await rewardTokenContract.connect(owner).approve(farmContract.getAddress(), tenThousand_tokens);
-                console.log(await rewardTokenContract.balanceOf(owner.address));
                 await expect(farmContract.connect(owner).depositRewardToken(tenThousand_tokens)).to.be.revertedWith("you have not enough reward tokens");
             });
             it("depositRewardToken should be reverted with: you haven't enough allowance", async () => {
