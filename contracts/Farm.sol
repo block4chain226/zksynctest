@@ -37,7 +37,7 @@ contract Farm is Ownable, ReentrancyGuard {
     event SetFee(uint256 oldFee, uint256 newFee, uint256 indexed date);
     event DepositRewardToken(uint256 amount, uint256 indexed date);
 
-    function stake(uint256 _amount) external {
+    function stake(uint256 _amount) external nonReentrant {
         require(tokenB.balanceOf(msg.sender) >= _amount, "you don't have enough tokens");
         Position storage newPosition = positions[msg.sender];
         tokenB.safeTransferFrom(msg.sender, address(this), _amount);
