@@ -4,9 +4,12 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "hardhat/console.sol";
 
 contract Farm is Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+
     struct Position {
         uint256 amount;
         uint256 startDate;
@@ -37,7 +40,7 @@ contract Farm is Ownable, ReentrancyGuard {
     function stake(uint256 _amount) external {
         require(tokenB.balanceOf(msg.sender) >= _amount, "you don't have enough tokens");
         Position storage newPosition = positions[msg.sender];
-        tokenB.transferFrom(msg.sender, address(this), _amount);
+        tokenB.safeTransferFrom(msg.sender, address(this), _amount);
         if (newPosition.amount > 0) {
             claim();
         }
@@ -54,8 +57,8 @@ contract Farm is Ownable, ReentrancyGuard {
         require(userPosition.amount >= _amount, "you have not enough position amount");
         claim();
         userPosition.amount -= _amount;
-        tokenB.transfer(msg.sender, _amount);
         totalStaked -= _amount;
+        tokenB.safeTransfer(msg.sender, _amount);
         emit UnStake(msg.sender, _amount, block.timestamp);
     }
 
@@ -67,9 +70,9 @@ contract Farm is Ownable, ReentrancyGuard {
         uint256 claimAmount = (userPosition.amount * stakeTime * accRewardPerSecond) / PRECISION_FACTOR;
         require(claimAmount > 0, "user have not rewards");
         require(tokenA.balanceOf(address(this)) >= claimAmount, "contract has not enough reward tokens");
-        tokenA.transfer(msg.sender, claimAmount);
         totalRewardsPaid += claimAmount;
         userPosition.startDate = block.timestamp;
+        tokenA.safeTransfer(msg.sender, claimAmount);
         emit Claim(msg.sender, claimAmount, block.timestamp);
     }
 
@@ -91,7 +94,7 @@ contract Farm is Ownable, ReentrancyGuard {
         require(_amount > 0, "amount 0");
         require(tokenA.balanceOf(owner()) >= _amount, "you have not enough reward tokens");
         require(tokenA.allowance(msg.sender, address(this)) >= _amount, "you haven't enough allowance");
-        tokenA.transferFrom(owner(), address(this), _amount);
+        tokenA.safeTransferFrom(owner(), address(this), _amount);
         emit DepositRewardToken(_amount, block.timestamp);
     }
 
